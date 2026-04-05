@@ -13,21 +13,38 @@ A simple macOS app to download music from **Spotify** and **YouTube** playlists 
 
 ## Installation
 
+> **Never used a terminal before?** No problem — follow the steps below exactly as written.
+
+### Step 1 — Open Terminal
+
+Press **⌘ + Space**, type `Terminal`, press **Enter**.  
+A black or white window with a text prompt will open. That's your Terminal.
+
+### Step 2 — Paste and run these three commands one by one
+
+Copy each line, paste it into Terminal with **⌘ + V**, then press **Enter**. Wait for it to finish before pasting the next one.
+
 ```bash
 git clone https://github.com/htocqueville/music-downloader-mac.git
+```
+```bash
 cd music-downloader-mac
+```
+```bash
 bash setup.sh
 ```
 
-`setup.sh` will install:
-- [Homebrew](https://brew.sh) (if not already installed)
-- ffmpeg
-- [spotdl](https://github.com/nyekuuu/spotify-downloader) (nyekuuu fork, with `--user-auth` OAuth support)
-- [yt-dlp](https://github.com/yt-dlp/yt-dlp)
+The setup takes a few minutes (it installs the necessary tools). You'll see progress messages. At the end you should see **"Setup complete!"**.
 
-It then compiles and installs **Music Downloader.app** into `/Applications`.
+### What gets installed
 
-> **Re-running `setup.sh` is safe** — it upgrades tools and rebuilds the app. Use it to update.
+- [Homebrew](https://brew.sh) — macOS package manager (if not already installed)
+- ffmpeg — audio conversion
+- [spotdl](https://github.com/nyekuuu/spotify-downloader) (nyekuuu fork, with `--user-auth` OAuth support for the new Spotify API)
+- [yt-dlp](https://github.com/yt-dlp/yt-dlp) — YouTube downloader
+- **Music Downloader.app** → compiled and placed in `/Applications`
+
+> **Re-running `setup.sh` is safe** — it upgrades all tools and rebuilds the app. Use it to update.
 
 ## Spotify Setup (one-time, ~5 min)
 
@@ -69,6 +86,8 @@ No setup required. YouTube downloads work immediately after running `setup.sh`.
 
 ## Updating
 
+Open Terminal (⌘ + Space → "Terminal"), then run:
+
 ```bash
 cd music-downloader-mac
 git pull
@@ -82,7 +101,7 @@ bash setup.sh
 | App doesn't open / "damaged" error | Re-run `bash setup.sh` from the project folder |
 | `spotdl: command not found` in Terminal | Re-run `setup.sh`, then restart your terminal |
 | Spotify: "INVALID_CLIENT" | Re-check Client ID and Secret in your Spotify app settings |
-| Spotify: "Invalid redirect URI" | Ensure Redirect URI is exactly `http://localhost:8888/callback` |
+| Spotify: "Invalid redirect URI" | Add both `http://127.0.0.1:9900/` and `http://127.0.0.1:9900` in your Spotify app Redirect URIs |
 | YouTube download stops mid-playlist | Re-run the download — yt-dlp skips already-downloaded files |
 | `ffmpeg not found` | Run: `brew install ffmpeg` |
 

@@ -51,18 +51,55 @@ else
     success "pipx already installed"
 fi
 
-# ── 4. spotdl (nyekuuu fork — adds --user-auth OAuth for Spotify) ─────────────
+# ── 4. Python version check (spotdl requires Python >=3.10, <3.14) ───────────
+info "Checking Python version for spotdl..."
+
+find_compatible_python() {
+    for ver in python3.13 python3.12 python3.11 python3.10; do
+        if command -v "$ver" &>/dev/null; then
+            echo "$ver"; return
+        fi
+    done
+    # Check if the default python3 falls in the compatible range
+    if command -v python3 &>/dev/null; then
+        local minor
+        minor=$(python3 -c "import sys; print(sys.version_info.minor)" 2>/dev/null || echo "0")
+        local major
+        major=$(python3 -c "import sys; print(sys.version_info.major)" 2>/dev/null || echo "0")
+        if [ "$major" -eq 3 ] && [ "$minor" -ge 10 ] && [ "$minor" -lt 14 ]; then
+            echo "python3"; return
+        fi
+    fi
+    echo ""
+}
+
+PYTHON_FOR_SPOTDL="$(find_compatible_python)"
+
+if [ -z "$PYTHON_FOR_SPOTDL" ]; then
+    warn "Python 3.10–3.13 not found (spotdl is not yet compatible with Python 3.14+)."
+    info "Installing Python 3.13 via Homebrew..."
+    brew install python@3.13
+    PYTHON_FOR_SPOTDL="$(brew --prefix)/bin/python3.13"
+    if [ ! -f "$PYTHON_FOR_SPOTDL" ]; then
+        PYTHON_FOR_SPOTDL="python3.13"
+    fi
+fi
+
+success "Using $PYTHON_FOR_SPOTDL for spotdl"
+
+# ── 5. spotdl (nyekuuu fork — adds --user-auth OAuth for Spotify) ─────────────
 info "Checking spotdl..."
 SPOTDL_FORK="git+https://github.com/nyekuuu/spotify-downloader.git"
 if pipx list 2>/dev/null | grep -q "spotdl"; then
     info "Upgrading spotdl from nyekuuu fork..."
-    pipx install --force "$SPOTDL_FORK" || warn "spotdl upgrade failed, keeping existing version"
+    pipx install --force --python "$PYTHON_FOR_SPOTDL" "$SPOTDL_FORK" \
+        || warn "spotdl upgrade failed, keeping existing version"
 else
     info "Installing spotdl from nyekuuu fork..."
-    pipx install "$SPOTDL_FORK"
+    pipx install --python "$PYTHON_FOR_SPOTDL" "$SPOTDL_FORK"
 fi
 
-# ── 5. yt-dlp ─────────────────────────────────────────────────────────────────
+# ── 6. yt-dlp ─────────────────────────────────────────────────────────────────
 info "Checking yt-dlp..."
 if ! command -v yt-dlp &>/dev/null; then
     info "Installing yt-dlp..."
@@ -73,7 +110,7 @@ else
     brew upgrade yt-dlp 2>/dev/null || true
 fi
 
-# ── 6. Resolve binary paths ───────────────────────────────────────────────────
+# ── 7. Resolve binary paths ───────────────────────────────────────────────────
 info "Resolving binary paths..."
 
 # spotdl path inside its pipx venv
@@ -100,7 +137,7 @@ if [ -z "$YTDLP_PATH" ]; then
 fi
 success "yt-dlp: $YTDLP_PATH"
 
-# ── 7. Compile AppleScript ────────────────────────────────────────────────────
+# ── 8. Compile AppleScript ────────────────────────────────────────────────────
 info "Compiling Music Downloader.app..."
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
