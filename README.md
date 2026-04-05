@@ -2,7 +2,7 @@
 
 A simple macOS app to download music from **Spotify** and **YouTube** playlists to your Music folder. No terminal knowledge required after setup.
 
-- Downloads to `~/Music/<playlist name>/` automatically
+- Downloads to `~/Music/music-downloader/<playlist name>/` automatically
 - MP3, 320 kbps
 - Spotify and YouTube are fully independent — use one, the other, or both
 
@@ -57,7 +57,14 @@ On your first Spotify download, the app will ask for these credentials and guide
 
 ## YouTube Setup
 
-No setup required. YouTube downloads work immediately after running `setup.sh`.
+YouTube downloads use your Safari session to authenticate (avoids bot detection).
+
+**One-time step:** Grant Terminal access to Safari cookies.
+1. Open **System Settings → Privacy & Security → Full Disk Access**
+2. Click **+** and add **Terminal** (found in `/Applications/Utilities/`)
+3. Restart Terminal
+
+You need to be **logged into YouTube in Safari** for downloads to work. No other setup required.
 
 ## Usage
 
@@ -76,9 +83,9 @@ No setup required. YouTube downloads work immediately after running `setup.sh`.
 
 | Source | Path |
 |--------|------|
-| Spotify | `~/Music/<playlist name>/<track number> - <artists> - <title>.mp3` |
-| YouTube playlist | `~/Music/<playlist name>/<video title>.mp3` |
-| YouTube single | `~/Music/YouTube/<uploader> - <title>.mp3` |
+| Spotify | `~/Music/music-downloader/<playlist name>/<track number> - <artists> - <title>.mp3` |
+| YouTube playlist | `~/Music/music-downloader/<playlist name>/<video title>.mp3` |
+| YouTube single | `~/Music/music-downloader/YouTube/<uploader> - <title>.mp3` |
 
 ## Updating
 
@@ -98,6 +105,7 @@ bash setup.sh
 | `spotdl: command not found` in Terminal | Re-run `setup.sh`, then restart your terminal |
 | Spotify: "INVALID_CLIENT" | Re-check Client ID and Secret in your Spotify app settings |
 | Spotify: "Invalid redirect URI" | Add both `http://127.0.0.1:9900/` and `http://127.0.0.1:9900` in your Spotify app Redirect URIs |
+| YouTube: "Operation not permitted" on cookies | Grant Terminal Full Disk Access (see YouTube Setup section) |
 | YouTube download stops mid-playlist | Re-run the download — yt-dlp skips already-downloaded files |
 | `ffmpeg not found` | Run: `brew install ffmpeg` |
 

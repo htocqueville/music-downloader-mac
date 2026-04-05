@@ -101,9 +101,9 @@ on handleSpotify(playlistURL)
 		do shell script spotdlPath & " --client-id " & quoted form of clientId & " --client-secret " & quoted form of clientSecret & " save 2>&1 || true"
 	end if
 
-	-- Build output path: ~/Music/<playlist-name>/<pos> - <artists> - <title>.mp3
+	-- Build output path: ~/Music/music-downloader/<playlist-name>/<pos> - <artists> - <title>.mp3
 	set musicDir to POSIX path of (path to music folder)
-	set outputTemplate to musicDir & "{list-name}/{list-position} - {artists} - {title}.{output-ext}"
+	set outputTemplate to musicDir & "music-downloader/{list-name}/{list-position} - {artists} - {title}.{output-ext}"
 
 	set cmd to "source ~/.zshrc 2>/dev/null; source ~/.zprofile 2>/dev/null; " & ¬
 		spotdlPath & " --config --user-auth download " & quoted form of playlistURL & ¬
@@ -126,17 +126,17 @@ on handleYouTube(videoURL)
 
 	if isPlaylist then
 		-- %(playlist_title)s resolved automatically by yt-dlp
-		set outputTemplate to musicDir & "%(playlist_title)s/%(title)s.%(ext)s"
+		set outputTemplate to musicDir & "music-downloader/%(playlist_title)s/%(title)s.%(ext)s"
 	else
-		-- Single video → ~/Music/YouTube/<uploader> - <title>.mp3
-		set outputTemplate to musicDir & "YouTube/%(uploader)s - %(title)s.%(ext)s"
+		-- Single video → ~/Music/music-downloader/YouTube/<uploader> - <title>.mp3
+		set outputTemplate to musicDir & "music-downloader/YouTube/%(uploader)s - %(title)s.%(ext)s"
 	end if
 
 	set cmd to "source ~/.zshrc 2>/dev/null; source ~/.zprofile 2>/dev/null; " & ¬
 		ytdlpPath & " --extract-audio --audio-format mp3" & ¬
 		" --postprocessor-args \"ffmpeg:-b:a 320k\"" & ¬
 		" --yes-playlist --add-metadata" & ¬
-		" --extractor-args \"youtube:player_client=tv,ios\"" & ¬
+		" --cookies-from-browser safari" & ¬
 		" -o " & quoted form of outputTemplate & ¬
 		" " & quoted form of videoURL & ¬
 		"; echo ''; echo '✅ Download complete. You can close this window.'"

@@ -99,16 +99,9 @@ else
     pipx install --python "$PYTHON_FOR_SPOTDL" "$SPOTDL_FORK"
 fi
 
-# ── 6. yt-dlp ─────────────────────────────────────────────────────────────────
-info "Checking yt-dlp..."
-if ! command -v yt-dlp &>/dev/null; then
-    info "Installing yt-dlp..."
-    brew install yt-dlp
-else
-    success "yt-dlp already installed"
-    info "Updating yt-dlp to latest..."
-    brew upgrade yt-dlp 2>/dev/null || true
-fi
+# ── 6. yt-dlp (always via brew — pip/system installs use outdated Python) ─────
+info "Installing/updating yt-dlp via Homebrew..."
+brew install yt-dlp 2>/dev/null || brew upgrade yt-dlp 2>/dev/null || true
 
 # ── 7. Resolve binary paths ───────────────────────────────────────────────────
 info "Resolving binary paths..."
