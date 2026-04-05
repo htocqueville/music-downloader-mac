@@ -35,7 +35,7 @@ Spotify requires a free developer API key to access its catalog.
 
 **Quick steps:**
 1. Go to [developer.spotify.com/dashboard](https://developer.spotify.com/dashboard) and log in
-2. Create an app — set the Redirect URI to exactly `http://localhost:8888/callback`
+2. Create an app — add both Redirect URIs: `http://127.0.0.1:9900/` and `http://127.0.0.1:9900`
 3. Copy your **Client ID** and **Client Secret** from Settings
 
 On your first Spotify download, the app will ask for these credentials and guide you through the one-time browser authorization.

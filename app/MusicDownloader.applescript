@@ -72,7 +72,9 @@ on handleSpotify(playlistURL)
 			message "In the dashboard:" & return & ¬
 			"1. Click 'Create app'" & return & ¬
 			"2. Fill in any name and description" & return & ¬
-			"3. Set Redirect URI to: http://localhost:8888/callback" & return & ¬
+			"3. Add both Redirect URIs:" & return & ¬
+			"   • http://127.0.0.1:9900/" & return & ¬
+			"   • http://127.0.0.1:9900" & return & ¬
 			"4. Check 'Web API'" & return & ¬
 			"5. Go to Settings → copy Client ID and Client Secret" & return & return & ¬
 			"Then click OK and enter your credentials." ¬
