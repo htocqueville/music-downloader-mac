@@ -136,6 +136,7 @@ on handleYouTube(videoURL)
 		ytdlpPath & " --extract-audio --audio-format mp3" & ¬
 		" --postprocessor-args \"ffmpeg:-b:a 320k\"" & ¬
 		" --yes-playlist --add-metadata" & ¬
+		" --extractor-args \"youtube:player_client=tv,ios\"" & ¬
 		" -o " & quoted form of outputTemplate & ¬
 		" " & quoted form of videoURL & ¬
 		"; echo ''; echo '✅ Download complete. You can close this window.'"

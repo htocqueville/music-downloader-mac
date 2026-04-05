@@ -126,14 +126,16 @@ if [ ! -f "$SPOTDL_PATH" ]; then
 fi
 success "spotdl: $SPOTDL_PATH"
 
-# yt-dlp path
-YTDLP_PATH="$(command -v yt-dlp 2>/dev/null || true)"
+# yt-dlp path — prefer brew's version (ships with a modern Python runtime,
+# avoids the LibreSSL/SSL issues of system Python 3.9 pip installs)
+BREW_PREFIX="$(brew --prefix 2>/dev/null || echo /opt/homebrew)"
+YTDLP_PATH="$BREW_PREFIX/bin/yt-dlp"
+if [ ! -f "$YTDLP_PATH" ]; then
+    # Fallback: anything in PATH
+    YTDLP_PATH="$(command -v yt-dlp 2>/dev/null || true)"
+fi
 if [ -z "$YTDLP_PATH" ]; then
-    # Check inside spotdl venv
-    YTDLP_PATH="$PIPX_VENVS/spotdl/bin/yt-dlp"
-    if [ ! -f "$YTDLP_PATH" ]; then
-        error "yt-dlp binary not found. Try: brew install yt-dlp"
-    fi
+    error "yt-dlp binary not found. Try: brew install yt-dlp"
 fi
 success "yt-dlp: $YTDLP_PATH"
 

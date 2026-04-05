@@ -20,17 +20,13 @@ A simple macOS app to download music from **Spotify** and **YouTube** playlists 
 Press **⌘ + Space**, type `Terminal`, press **Enter**.  
 A black or white window with a text prompt will open. That's your Terminal.
 
-### Step 2 — Paste and run these three commands one by one
+### Step 2 — Copy and run the install commands
 
-Copy each line, paste it into Terminal with **⌘ + V**, then press **Enter**. Wait for it to finish before pasting the next one.
+Select all three lines, copy them (**⌘ + C**), paste into Terminal (**⌘ + V**), then press **Enter**.
 
 ```bash
 git clone https://github.com/htocqueville/music-downloader-mac.git
-```
-```bash
 cd music-downloader-mac
-```
-```bash
 bash setup.sh
 ```
 
