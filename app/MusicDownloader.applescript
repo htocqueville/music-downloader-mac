@@ -6,12 +6,18 @@ on run
 	try
 		set dialogURL to display dialog "Paste a Spotify or YouTube playlist URL:" ¬
 			default answer "" ¬
-			buttons {"Cancel", "Download"} ¬
+			buttons {"Cancel", "⚙ Spotify Settings", "Download"} ¬
 			default button "Download" ¬
 			cancel button "Cancel" ¬
 			with title "Music Downloader"
 
 		set inputURL to text returned of dialogURL
+		set clickedBtn to button returned of dialogURL
+
+		if clickedBtn is "⚙ Spotify Settings" then
+			my showSpotifySettings()
+			return
+		end if
 
 		if inputURL is "" then
 			display alert "Error" message "URL cannot be empty." buttons {"OK"} as warning
@@ -43,14 +49,79 @@ on run
 end run
 
 
+on showSpotifySettings()
+	set homeDir to POSIX path of (path to home folder)
+	set configPath to homeDir & ".spotdl/config.json"
+
+	-- Read current client_id
+	set currentId to ""
+	try
+		set currentId to do shell script "python3 -c \"import json; d=json.load(open('" & configPath & "')); print(d.get('client_id',''))\" 2>/dev/null"
+	end try
+
+	-- Show masked client_id
+	set maskedId to "(not set)"
+	if length of currentId > 8 then
+		set maskedId to (text 1 thru 8 of currentId) & "••••••••"
+	else if currentId is not "" then
+		set maskedId to currentId & "••••"
+	end if
+
+	set settingsChoice to display alert "Spotify API Credentials" ¬
+		message "Current Client ID: " & maskedId & return & return & ¬
+		"If downloads fail with an authentication error, your Spotify app credentials may have been revoked or reset." & return & return & ¬
+		"Click 'Edit Credentials' to enter new ones, or 'Open Dashboard' to get them from developer.spotify.com." ¬
+		buttons {"Cancel", "Open Dashboard", "Edit Credentials"} ¬
+		default button "Edit Credentials"
+
+	set choiceBtn to button returned of settingsChoice
+
+	if choiceBtn is "Open Dashboard" then
+		open location "https://developer.spotify.com/dashboard"
+		-- Continue to edit after opening dashboard
+		set choiceBtn to "Edit Credentials"
+	end if
+
+	if choiceBtn is "Edit Credentials" then
+		set idDialog to display dialog "Enter your Spotify Client ID:" ¬
+			default answer currentId ¬
+			buttons {"Cancel", "Next"} ¬
+			default button "Next" ¬
+			cancel button "Cancel" ¬
+			with title "Spotify Credentials — Step 1/2"
+		set newClientId to text returned of idDialog
+
+		set secretDialog to display dialog "Enter your Spotify Client Secret:" ¬
+			default answer "" ¬
+			buttons {"Cancel", "Save"} ¬
+			default button "Save" ¬
+			cancel button "Cancel" ¬
+			with title "Spotify Credentials — Step 2/2"
+		set newClientSecret to text returned of secretDialog
+
+		-- Save credentials via spotdl
+		do shell script "mkdir -p " & quoted form of (homeDir & ".spotdl")
+		do shell script spotdlPath & " --client-id " & quoted form of newClientId & " --client-secret " & quoted form of newClientSecret & " save 2>&1 || true"
+
+		-- Clear cached auth token so it re-authenticates with new credentials
+		do shell script "rm -f " & quoted form of (homeDir & ".spotdl/.spotipy") & " 2>/dev/null; true"
+
+		display alert "Credentials Saved" ¬
+			message "Your Spotify credentials have been updated and the auth cache has been cleared." & return & return & ¬
+			"The app will open a browser to re-authenticate on your next Spotify download." ¬
+			buttons {"OK"} default button "OK"
+	end if
+end showSpotifySettings
+
+
 on handleSpotify(playlistURL)
 	set homeDir to POSIX path of (path to home folder)
 	set configPath to homeDir & ".spotdl/config.json"
 
-	-- Check if Spotify credentials are configured
+	-- Check if both Spotify credentials are configured
 	set hasCredentials to false
 	try
-		set checkCmd to "python3 -c \"import json,sys; d=json.load(open('" & configPath & "')); v=d.get('client_id',''); sys.exit(0 if v and len(v)>5 else 1)\" 2>/dev/null && echo YES || echo NO"
+		set checkCmd to "python3 -c \"import json,sys; d=json.load(open('" & configPath & "')); cid=d.get('client_id',''); cs=d.get('client_secret',''); sys.exit(0 if cid and len(cid)>5 and cs and len(cs)>5 else 1)\" 2>/dev/null && echo YES || echo NO"
 		set credCheck to do shell script checkCmd
 		if credCheck is "YES" then
 			set hasCredentials to true
@@ -59,12 +130,11 @@ on handleSpotify(playlistURL)
 
 	if not hasCredentials then
 		-- First-time Spotify setup
-		set setupIntro to display alert "Spotify Setup Required" ¬
+		display alert "Spotify Setup Required" ¬
 			message "To download from Spotify, you need a free Spotify Developer account." & return & return & ¬
 			"Click 'Open Dashboard' to create an app and get your API credentials." ¬
-			buttons {"Cancel", "Open Dashboard"} ¬
-			default button "Open Dashboard" ¬
-			cancel button "Cancel"
+			buttons {"Open Dashboard"} ¬
+			default button "Open Dashboard"
 
 		open location "https://developer.spotify.com/dashboard"
 
