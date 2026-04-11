@@ -186,10 +186,11 @@ if [ ! -f "$APPLESCRIPT_SOURCE" ]; then
     error "AppleScript source not found at $APPLESCRIPT_SOURCE"
 fi
 
-# Read current version from version.txt (fallback to "0.0.0" so update check always fires)
-CURRENT_VERSION="$(cat "$SCRIPT_DIR/version.txt" 2>/dev/null | tr -d '[:space:]' || echo "0.0.0")"
+# Bake the current git commit SHA into the app — no version.txt to maintain.
+# The app compares this SHA against GitHub's API at launch to detect updates.
+CURRENT_COMMIT="$(git -C "$SCRIPT_DIR" rev-parse HEAD 2>/dev/null || echo "unknown")"
 
-# Derive raw GitHub URL for remote version check from the git remote
+# Derive GitHub API URL for latest commit on main
 REMOTE_ORIGIN="$(git -C "$SCRIPT_DIR" remote get-url origin 2>/dev/null || echo "")"
 if [[ "$REMOTE_ORIGIN" == git@github.com:* ]]; then
     _GITHUB_PATH="${REMOTE_ORIGIN#git@github.com:}"; _GITHUB_PATH="${_GITHUB_PATH%.git}"
@@ -199,19 +200,19 @@ else
     _GITHUB_PATH=""
 fi
 if [ -n "$_GITHUB_PATH" ]; then
-    VERSION_URL="https://raw.githubusercontent.com/$_GITHUB_PATH/main/version.txt"
+    COMMITS_URL="https://api.github.com/repos/$_GITHUB_PATH/commits/main"
 else
-    VERSION_URL=""
+    COMMITS_URL=""
 fi
-success "Version: $CURRENT_VERSION (remote check: ${VERSION_URL:-disabled})"
+success "Commit: ${CURRENT_COMMIT:0:7} (remote check: ${COMMITS_URL:-disabled})"
 
 # Inject all compile-time values into the script
 sed \
     -e "s|__SPOTDL_PATH__|$SPOTDL_PATH|g" \
     -e "s|__YTDLP_PATH__|$YTDLP_PATH|g" \
     -e "s|__REPO_PATH__|$SCRIPT_DIR|g" \
-    -e "s|__CURRENT_VERSION__|$CURRENT_VERSION|g" \
-    -e "s|__VERSION_URL__|$VERSION_URL|g" \
+    -e "s|__CURRENT_COMMIT__|$CURRENT_COMMIT|g" \
+    -e "s|__COMMITS_URL__|$COMMITS_URL|g" \
     "$APPLESCRIPT_SOURCE" > "$TMP_SCRIPT"
 
 # Remove old app if present

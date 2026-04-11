@@ -1,28 +1,38 @@
--- Paths and version injected by setup.sh at compile time
+-- Compile-time values injected by setup.sh
 property spotdlPath : "__SPOTDL_PATH__"
 property ytdlpPath : "__YTDLP_PATH__"
 property repoPath : "__REPO_PATH__"
-property currentVersion : "__CURRENT_VERSION__"
-property versionURL : "__VERSION_URL__"
+property currentCommit : "__CURRENT_COMMIT__"
+property commitsURL : "__COMMITS_URL__"
 
 on run
 	-- ── Auto-update check ──────────────────────────────────────────────────────
-	-- Runs before the main dialog. Timeout 3s so no visible delay on bad internet.
-	-- All errors are caught silently — a failed check never blocks the user.
-	if versionURL is not "" then
+	-- Compares the baked-in git SHA against the latest commit on GitHub main.
+	-- A push = new SHA = update prompt. No version file to maintain.
+	-- curl timeout 3s; all errors caught silently so a network issue never blocks.
+	if commitsURL is not "" then
 		try
-			set remoteVersion to do shell script "curl -sf --max-time 3 " & quoted form of versionURL & " | tr -d '[:space:]'"
-			if remoteVersion is not "" and remoteVersion is not currentVersion then
-				set updateMsg to "A new version of Music Downloader is available!" & return & return & ¬
-					"Installed : " & currentVersion & return & ¬
-					"Available : " & remoteVersion & return & return & ¬
-					"Update now? This opens a Terminal, rebuilds the app, then closes it automatically."
-				set updateChoice to display dialog updateMsg ¬
-					buttons {"Later", "Update Now"} default button "Update Now" ¬
-					with title "Update Available"
-				if button returned of updateChoice is "Update Now" then
-					my performUpdate()
-					return
+			set apiResult to do shell script "curl -sf --max-time 3 " & quoted form of commitsURL & " | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d[\"sha\"]+\"|\"+(d[\"commit\"][\"message\"].split(chr(10))[0])+\"|\"+d[\"commit\"][\"author\"][\"date\"][:10])' 2>/dev/null"
+			if apiResult is not "" then
+				set AppleScript's text item delimiters to "|"
+				set apiParts to text items of apiResult
+				set AppleScript's text item delimiters to ""
+				set remoteCommit to item 1 of apiParts
+				set commitMsg to item 2 of apiParts
+				set commitDate to item 3 of apiParts
+				if remoteCommit is not currentCommit then
+					set updateMsg to "A new update is available!" & return & return & ¬
+						"Installed : " & text 1 thru 7 of currentCommit & return & ¬
+						"Available : " & text 1 thru 7 of remoteCommit & "  (" & commitDate & ")" & return & ¬
+						"            " & quote & commitMsg & quote & return & return & ¬
+						"Update now? Opens a Terminal, rebuilds the app automatically."
+					set updateChoice to display dialog updateMsg ¬
+						buttons {"Later", "Update Now"} default button "Update Now" ¬
+						with title "Update Available"
+					if button returned of updateChoice is "Update Now" then
+						my performUpdate()
+						return
+					end if
 				end if
 			end if
 		end try
@@ -97,29 +107,37 @@ end performUpdate
 -- Check for updates on demand (called from Settings). Returns true if an
 -- update was found and the user chose to install it.
 on checkForUpdates()
-	if versionURL is "" then
+	if commitsURL is "" then
 		display alert "Update check unavailable" ¬
 			message "No GitHub remote is configured. Re-run setup.sh from the project folder to fix this." ¬
 			buttons {"OK"} default button "OK"
 		return false
 	end if
 	try
-		set remoteVersion to do shell script "curl -sf --max-time 5 " & quoted form of versionURL & " | tr -d '[:space:]'"
-		if remoteVersion is "" then
+		set apiResult to do shell script "curl -sf --max-time 5 " & quoted form of commitsURL & " | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d[\"sha\"]+\"|\"+(d[\"commit\"][\"message\"].split(chr(10))[0])+\"|\"+d[\"commit\"][\"author\"][\"date\"][:10])' 2>/dev/null"
+		if apiResult is "" then
 			display alert "Update check failed" ¬
 				message "Could not reach GitHub. Check your internet connection." ¬
 				buttons {"OK"} default button "OK"
 			return false
 		end if
-		if remoteVersion is currentVersion then
+		set AppleScript's text item delimiters to "|"
+		set apiParts to text items of apiResult
+		set AppleScript's text item delimiters to ""
+		set remoteCommit to item 1 of apiParts
+		set commitMsg to item 2 of apiParts
+		set commitDate to item 3 of apiParts
+		if remoteCommit is currentCommit then
 			display alert "You're up to date!" ¬
-				message "Music Downloader " & currentVersion & " is the latest version." ¬
+				message "Commit : " & text 1 thru 7 of currentCommit & return & ¬
+				"Date   : " & commitDate ¬
 				buttons {"OK"} default button "OK"
 			return false
 		end if
-		set updateMsg to "A new version is available!" & return & return & ¬
-			"Installed : " & currentVersion & return & ¬
-			"Available : " & remoteVersion & return & return & ¬
+		set updateMsg to "A new update is available!" & return & return & ¬
+			"Installed : " & text 1 thru 7 of currentCommit & return & ¬
+			"Available : " & text 1 thru 7 of remoteCommit & "  (" & commitDate & ")" & return & ¬
+			"            " & quote & commitMsg & quote & return & return & ¬
 			"Update now?"
 		set choice to display dialog updateMsg ¬
 			buttons {"Cancel", "Update Now"} default button "Update Now" ¬
@@ -156,7 +174,7 @@ on showSettings()
 	end if
 
 	set infoMsg to "Spotify Client ID : " & maskedId & return & ¬
-		"App version       : " & currentVersion
+		"Commit            : " & text 1 thru 7 of currentCommit
 
 	set settingsChoice to display alert "Settings" ¬
 		message infoMsg ¬
