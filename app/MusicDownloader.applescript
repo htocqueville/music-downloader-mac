@@ -1,12 +1,38 @@
--- Paths injected by setup.sh at compile time
+-- Paths and version injected by setup.sh at compile time
 property spotdlPath : "__SPOTDL_PATH__"
 property ytdlpPath : "__YTDLP_PATH__"
+property repoPath : "__REPO_PATH__"
+property currentVersion : "__CURRENT_VERSION__"
+property versionURL : "__VERSION_URL__"
 
 on run
+	-- ── Auto-update check ──────────────────────────────────────────────────────
+	-- Runs before the main dialog. Timeout 3s so no visible delay on bad internet.
+	-- All errors are caught silently — a failed check never blocks the user.
+	if versionURL is not "" then
+		try
+			set remoteVersion to do shell script "curl -sf --max-time 3 " & quoted form of versionURL & " | tr -d '[:space:]'"
+			if remoteVersion is not "" and remoteVersion is not currentVersion then
+				set updateMsg to "A new version of Music Downloader is available!" & return & return & ¬
+					"Installed : " & currentVersion & return & ¬
+					"Available : " & remoteVersion & return & return & ¬
+					"Update now? This opens a Terminal, rebuilds the app, then closes it automatically."
+				set updateChoice to display dialog updateMsg ¬
+					buttons {"Later", "Update Now"} default button "Update Now" ¬
+					with title "Update Available"
+				if button returned of updateChoice is "Update Now" then
+					my performUpdate()
+					return
+				end if
+			end if
+		end try
+	end if
+
+	-- ── Main dialog ────────────────────────────────────────────────────────────
 	try
 		set dialogURL to display dialog "Paste a Spotify, YouTube or SoundCloud URL:" ¬
 			default answer "" ¬
-			buttons {"Cancel", "⚙ Spotify Settings", "Download"} ¬
+			buttons {"Cancel", "⚙ Settings", "Download"} ¬
 			default button "Download" ¬
 			cancel button "Cancel" ¬
 			with title "Music Downloader"
@@ -14,8 +40,8 @@ on run
 		set inputURL to text returned of dialogURL
 		set clickedBtn to button returned of dialogURL
 
-		if clickedBtn is "⚙ Spotify Settings" then
-			my showSpotifySettings()
+		if clickedBtn is "⚙ Settings" then
+			my showSettings()
 			return
 		end if
 
@@ -24,7 +50,6 @@ on run
 			return
 		end if
 
-		-- Detect source
 		set isSpotify to (inputURL contains "spotify.com")
 		set isYouTube to (inputURL contains "youtube.com" or inputURL contains "youtu.be")
 		set isSoundCloud to (inputURL contains "soundcloud.com")
@@ -52,17 +77,77 @@ on run
 end run
 
 
-on showSpotifySettings()
+-- ── Update ────────────────────────────────────────────────────────────────────
+
+-- git pull + setup.sh in a Terminal window, then quit so the user reopens
+-- the freshly compiled app. The Terminal echoes a clear completion message.
+on performUpdate()
+	set updateCmd to ¬
+		"cd " & quoted form of repoPath & ¬
+		" && echo '⬇️  Pulling latest changes...' && git pull --ff-only" & ¬
+		" && echo '' && echo '🔧 Rebuilding app...' && bash " & quoted form of (repoPath & "/setup.sh") & ¬
+		" && echo '' && echo '✅ Update complete! Please reopen Music Downloader from /Applications or Spotlight.'" & ¬
+		" || echo '' && echo '❌ Update failed. Check the output above and try again.'"
+	tell application "Terminal"
+		activate
+		do script updateCmd
+	end tell
+end performUpdate
+
+-- Check for updates on demand (called from Settings). Returns true if an
+-- update was found and the user chose to install it.
+on checkForUpdates()
+	if versionURL is "" then
+		display alert "Update check unavailable" ¬
+			message "No GitHub remote is configured. Re-run setup.sh from the project folder to fix this." ¬
+			buttons {"OK"} default button "OK"
+		return false
+	end if
+	try
+		set remoteVersion to do shell script "curl -sf --max-time 5 " & quoted form of versionURL & " | tr -d '[:space:]'"
+		if remoteVersion is "" then
+			display alert "Update check failed" ¬
+				message "Could not reach GitHub. Check your internet connection." ¬
+				buttons {"OK"} default button "OK"
+			return false
+		end if
+		if remoteVersion is currentVersion then
+			display alert "You're up to date!" ¬
+				message "Music Downloader " & currentVersion & " is the latest version." ¬
+				buttons {"OK"} default button "OK"
+			return false
+		end if
+		set updateMsg to "A new version is available!" & return & return & ¬
+			"Installed : " & currentVersion & return & ¬
+			"Available : " & remoteVersion & return & return & ¬
+			"Update now?"
+		set choice to display dialog updateMsg ¬
+			buttons {"Cancel", "Update Now"} default button "Update Now" ¬
+			with title "Update Available"
+		if button returned of choice is "Update Now" then
+			my performUpdate()
+			return true
+		end if
+	on error
+		display alert "Update check failed" ¬
+			message "Could not reach GitHub. Check your internet connection." ¬
+			buttons {"OK"} default button "OK"
+	end try
+	return false
+end checkForUpdates
+
+
+-- ── Settings ──────────────────────────────────────────────────────────────────
+
+on showSettings()
 	set homeDir to POSIX path of (path to home folder)
 	set configPath to homeDir & ".spotdl/config.json"
 
-	-- Read current client_id
+	-- Read current client_id for display
 	set currentId to ""
 	try
 		set currentId to do shell script "python3 -c \"import json; d=json.load(open('" & configPath & "')); print(d.get('client_id',''))\" 2>/dev/null"
 	end try
-
-	-- Show masked client_id
 	set maskedId to "(not set)"
 	if length of currentId > 8 then
 		set maskedId to (text 1 thru 8 of currentId) & "••••••••"
@@ -70,34 +155,38 @@ on showSpotifySettings()
 		set maskedId to currentId & "••••"
 	end if
 
-	set settingsChoice to display alert "Spotify API Credentials" ¬
-		message "Current Client ID: " & maskedId & return & return & ¬
-		"If downloads fail with an authentication error, your Spotify app credentials may have been revoked or reset." & return & return & ¬
-		"Click 'Edit Credentials' to enter new ones, or 'Open Dashboard' to get them from developer.spotify.com." ¬
-		buttons {"Cancel", "Open Dashboard", "Edit Credentials"} ¬
-		default button "Edit Credentials"
+	set infoMsg to "Spotify Client ID : " & maskedId & return & ¬
+		"App version       : " & currentVersion
+
+	set settingsChoice to display alert "Settings" ¬
+		message infoMsg ¬
+		buttons {"Cancel", "Check for Updates", "Edit Spotify Credentials"} ¬
+		default button "Edit Spotify Credentials"
 
 	set choiceBtn to button returned of settingsChoice
 
-	if choiceBtn is "Open Dashboard" then
-		open location "https://developer.spotify.com/dashboard"
-		set choiceBtn to "Edit Credentials"
-	end if
+	if choiceBtn is "Check for Updates" then
+		if my checkForUpdates() then return -- user triggered update, bail out
 
-	if choiceBtn is "Edit Credentials" then
-		set idDialog to display dialog "Enter your Spotify Client ID:" ¬
+	else if choiceBtn is "Edit Spotify Credentials" then
+		open location "https://developer.spotify.com/dashboard"
+		display alert "Get your Spotify credentials" ¬
+			message "In the Spotify Developer Dashboard:" & return & ¬
+			"1. Open (or create) your app" & return & ¬
+			"2. Settings → copy Client ID and Client Secret" & return & ¬
+			"   (Redirect URIs must include http://127.0.0.1:9900/)" & return & return & ¬
+			"Then click OK and enter them below." ¬
+			buttons {"OK"} default button "OK"
+
+		set idDialog to display dialog "Spotify Client ID:" ¬
 			default answer currentId ¬
-			buttons {"Cancel", "Next"} ¬
-			default button "Next" ¬
-			cancel button "Cancel" ¬
+			buttons {"Cancel", "Next"} default button "Next" cancel button "Cancel" ¬
 			with title "Spotify Credentials — Step 1/2"
 		set newClientId to text returned of idDialog
 
-		set secretDialog to display dialog "Enter your Spotify Client Secret:" ¬
+		set secretDialog to display dialog "Spotify Client Secret:" ¬
 			default answer "" ¬
-			buttons {"Cancel", "Save"} ¬
-			default button "Save" ¬
-			cancel button "Cancel" ¬
+			buttons {"Cancel", "Save"} default button "Save" cancel button "Cancel" ¬
 			with title "Spotify Credentials — Step 2/2"
 		set newClientSecret to text returned of secretDialog
 
@@ -108,11 +197,11 @@ on showSpotifySettings()
 			"The app will open a browser to re-authenticate on your next Spotify download." ¬
 			buttons {"OK"} default button "OK"
 	end if
-end showSpotifySettings
+end showSettings
 
 
--- Save client_id + client_secret directly into spotdl's config.json
--- and wipe all spotipy token caches so stale refresh tokens can't cause 86400s bans.
+-- ── Credentials ───────────────────────────────────────────────────────────────
+
 on saveCredentials(homeDir, configPath, clientId, clientSecret)
 	do shell script "mkdir -p " & quoted form of (homeDir & ".spotdl")
 	set pyCode to "import json; d=json.load(open('" & configPath & "')); d['client_id']='" & clientId & "'; d['client_secret']='" & clientSecret & "'; open('" & configPath & "','w').write(json.dumps(d,indent=2))"
@@ -121,12 +210,13 @@ on saveCredentials(homeDir, configPath, clientId, clientSecret)
 end saveCredentials
 
 
+-- ── Spotify ───────────────────────────────────────────────────────────────────
+
 on handleSpotify(playlistURL)
 	set homeDir to POSIX path of (path to home folder)
 	set configPath to homeDir & ".spotdl/config.json"
 	set musicDir to POSIX path of (path to music folder)
 
-	-- Check credentials (not default shared spotdl ones)
 	set hasCredentials to false
 	set defaultId to "5f573c9620494bae87890c0f08a60293"
 	try
@@ -154,16 +244,12 @@ on handleSpotify(playlistURL)
 		set idDialog to display dialog "Enter your Spotify Client ID:" ¬
 			default answer "" buttons {"Cancel", "Next"} default button "Next" cancel button "Cancel" ¬
 			with title "Spotify Setup — Step 1/2"
-		set clientId to text returned of idDialog
 		set secretDialog to display dialog "Enter your Spotify Client Secret:" ¬
 			default answer "" buttons {"Cancel", "Save & Download"} default button "Save & Download" cancel button "Cancel" ¬
 			with title "Spotify Setup — Step 2/2"
 		my saveCredentials(homeDir, configPath, text returned of idDialog, text returned of secretDialog)
 	end if
 
-	-- --overwrite skip (set in ~/.spotdl/config.json) makes spotdl check whether the
-	-- output file already exists on disk before downloading each track.
-	-- Behaviour: file present → skip | file deleted → re-downloads | new track → downloads.
 	set outputTemplate to musicDir & "music-downloader/{list-name}/{list-position} - {artists} - {title}.{output-ext}"
 	set cmd to "source ~/.zshrc 2>/dev/null; source ~/.zprofile 2>/dev/null; " & ¬
 		spotdlPath & " --config --user-auth download " & quoted form of playlistURL & ¬
@@ -178,6 +264,8 @@ on handleSpotify(playlistURL)
 end handleSpotify
 
 
+-- ── SoundCloud ────────────────────────────────────────────────────────────────
+
 on handleSoundCloud(scURL)
 	set musicDir to POSIX path of (path to music folder)
 	set isSet to (scURL contains "/sets/")
@@ -188,8 +276,6 @@ on handleSoundCloud(scURL)
 		set outputTemplate to musicDir & "music-downloader/SoundCloud/%(uploader)s - %(title)s.%(ext)s"
 	end if
 
-	-- --no-overwrites makes yt-dlp check whether the output file already exists on disk.
-	-- Behaviour: file present → skip | file deleted → re-downloads | new track → downloads.
 	set cmd to "source ~/.zshrc 2>/dev/null; source ~/.zprofile 2>/dev/null; " & ¬
 		ytdlpPath & ¬
 		" --ignore-errors" & ¬
@@ -209,6 +295,8 @@ on handleSoundCloud(scURL)
 end handleSoundCloud
 
 
+-- ── YouTube ───────────────────────────────────────────────────────────────────
+
 on handleYouTube(videoURL)
 	set musicDir to POSIX path of (path to music folder)
 	set isPlaylist to (videoURL contains "list=")
@@ -219,8 +307,6 @@ on handleYouTube(videoURL)
 		set outputTemplate to musicDir & "music-downloader/YouTube/%(uploader)s - %(title)s.%(ext)s"
 	end if
 
-	-- --no-overwrites makes yt-dlp check whether the output file already exists on disk.
-	-- Behaviour: file present → skip | file deleted → re-downloads | new track → downloads.
 	set cmd to "source ~/.zshrc 2>/dev/null; source ~/.zprofile 2>/dev/null; " & ¬
 		ytdlpPath & " --extract-audio --audio-format mp3" & ¬
 		" --postprocessor-args \"ffmpeg:-b:a 320k\"" & ¬

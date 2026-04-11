@@ -186,10 +186,32 @@ if [ ! -f "$APPLESCRIPT_SOURCE" ]; then
     error "AppleScript source not found at $APPLESCRIPT_SOURCE"
 fi
 
-# Inject binary paths into the script
+# Read current version from version.txt (fallback to "0.0.0" so update check always fires)
+CURRENT_VERSION="$(cat "$SCRIPT_DIR/version.txt" 2>/dev/null | tr -d '[:space:]' || echo "0.0.0")"
+
+# Derive raw GitHub URL for remote version check from the git remote
+REMOTE_ORIGIN="$(git -C "$SCRIPT_DIR" remote get-url origin 2>/dev/null || echo "")"
+if [[ "$REMOTE_ORIGIN" == git@github.com:* ]]; then
+    _GITHUB_PATH="${REMOTE_ORIGIN#git@github.com:}"; _GITHUB_PATH="${_GITHUB_PATH%.git}"
+elif [[ "$REMOTE_ORIGIN" == https://github.com/* ]]; then
+    _GITHUB_PATH="${REMOTE_ORIGIN#https://github.com/}"; _GITHUB_PATH="${_GITHUB_PATH%.git}"
+else
+    _GITHUB_PATH=""
+fi
+if [ -n "$_GITHUB_PATH" ]; then
+    VERSION_URL="https://raw.githubusercontent.com/$_GITHUB_PATH/main/version.txt"
+else
+    VERSION_URL=""
+fi
+success "Version: $CURRENT_VERSION (remote check: ${VERSION_URL:-disabled})"
+
+# Inject all compile-time values into the script
 sed \
     -e "s|__SPOTDL_PATH__|$SPOTDL_PATH|g" \
     -e "s|__YTDLP_PATH__|$YTDLP_PATH|g" \
+    -e "s|__REPO_PATH__|$SCRIPT_DIR|g" \
+    -e "s|__CURRENT_VERSION__|$CURRENT_VERSION|g" \
+    -e "s|__VERSION_URL__|$VERSION_URL|g" \
     "$APPLESCRIPT_SOURCE" > "$TMP_SCRIPT"
 
 # Remove old app if present
