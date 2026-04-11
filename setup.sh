@@ -223,6 +223,13 @@ fi
 osacompile -o "$APP_DEST" "$TMP_SCRIPT"
 rm -f "$TMP_SCRIPT"
 
+# Apply custom icon (replaces the default Script Editor applet icon)
+ICON_SRC="$SCRIPT_DIR/assets/Sounddrop.icns"
+if [ -f "$ICON_SRC" ]; then
+    cp "$ICON_SRC" "$APP_DEST/Contents/Resources/applet.icns"
+    touch "$APP_DEST"
+fi
+
 # Remove quarantine flag (app was built locally, shouldn't be quarantined,
 # but being explicit prevents Gatekeeper dialogs on older macOS)
 find "$APP_DEST" -exec xattr -c {} \; 2>/dev/null || true
