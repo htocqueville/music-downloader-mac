@@ -4,7 +4,7 @@ property ytdlpPath : "__YTDLP_PATH__"
 
 on run
 	try
-		set dialogURL to display dialog "Paste a Spotify or YouTube playlist URL:" ¬
+		set dialogURL to display dialog "Paste a Spotify, YouTube or SoundCloud URL:" ¬
 			default answer "" ¬
 			buttons {"Cancel", "⚙ Spotify Settings", "Download"} ¬
 			default button "Download" ¬
@@ -27,16 +27,19 @@ on run
 		-- Detect source
 		set isSpotify to (inputURL contains "spotify.com")
 		set isYouTube to (inputURL contains "youtube.com" or inputURL contains "youtu.be")
+		set isSoundCloud to (inputURL contains "soundcloud.com")
 
-		if not isSpotify and not isYouTube then
+		if not isSpotify and not isYouTube and not isSoundCloud then
 			display alert "Unsupported URL" ¬
-				message "Please enter a Spotify or YouTube playlist URL." ¬
+				message "Please enter a Spotify, YouTube or SoundCloud URL." ¬
 				buttons {"OK"} as warning
 			return
 		end if
 
 		if isSpotify then
 			my handleSpotify(inputURL)
+		else if isSoundCloud then
+			my handleSoundCloud(inputURL)
 		else
 			my handleYouTube(inputURL)
 		end if
@@ -192,6 +195,46 @@ on handleSpotify(playlistURL)
 		do script cmd
 	end tell
 end handleSpotify
+
+
+on handleSoundCloud(scURL)
+	set musicDir to POSIX path of (path to music folder)
+
+	-- Detect content type from URL structure
+	set isSet to (scURL contains "/sets/")
+
+	if isSet then
+		-- Playlist/set → dedicated folder, tracks numbered and tagged
+		-- %(playlist_title)s = set name, %(playlist_index)02d = zero-padded position
+		set outputTemplate to musicDir & "music-downloader/%(playlist_title)s/%(playlist_index)02d - %(uploader)s - %(title)s.%(ext)s"
+	else
+		-- Single track or user profile → flat SoundCloud folder
+		set outputTemplate to musicDir & "music-downloader/SoundCloud/%(uploader)s - %(title)s.%(ext)s"
+	end if
+
+	-- Notes on flags:
+	--   -i / --ignore-errors   : skip unavailable tracks, don't abort the whole playlist
+	--   --embed-thumbnail      : write cover art into the MP3
+	--   --add-metadata         : artist, title, date tags
+	--   --min/max-sleep        : avoid SoundCloud rate-limiting (~429 after ~10 tracks)
+	--   --retries 5            : retry transient network failures per track
+	--   --no-playlist          : not set → yt-dlp downloads the full set automatically
+	set cmd to "source ~/.zshrc 2>/dev/null; source ~/.zprofile 2>/dev/null; " & ¬
+		ytdlpPath & ¬
+		" --ignore-errors" & ¬
+		" --extract-audio --audio-format mp3 --audio-quality 0" & ¬
+		" --add-metadata --embed-thumbnail" & ¬
+		" --min-sleep-interval 2 --max-sleep-interval 4" & ¬
+		" --retries 5" & ¬
+		" -o " & quoted form of outputTemplate & ¬
+		" " & quoted form of scURL & ¬
+		"; echo ''; echo '✅ Download complete. You can close this window.'"
+
+	tell application "Terminal"
+		activate
+		do script cmd
+	end tell
+end handleSoundCloud
 
 
 on handleYouTube(videoURL)
