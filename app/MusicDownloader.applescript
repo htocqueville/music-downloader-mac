@@ -307,9 +307,23 @@ on handleYouTube(videoURL)
 		set outputTemplate to musicDir & "music-downloader/YouTube/%(uploader)s - %(title)s.%(ext)s"
 	end if
 
+	-- Metadata cleanup flags:
+	--
+	-- --embed-thumbnail          : embed cover art (YouTube thumbnail) into the MP3
+	-- --parse-metadata (1st)     : try to split "Artist – Title" or "Artist - Title" from
+	--                              the video title into proper artist + track fields.
+	--                              Only fires when the pattern matches; harmless otherwise.
+	-- --parse-metadata (2nd)     : extract the 4-digit year from upload_date (YYYYMMDD)
+	--                              so the date tag is "2023" not "20230214".
+	-- --postprocessor-args       : (a) set audio bitrate 320k
+	--                              (b) strip YouTube-specific junk tags that pollute
+	--                                  music players: description, synopsis, purl, comment
 	set cmd to "source ~/.zshrc 2>/dev/null; source ~/.zprofile 2>/dev/null; " & ¬
 		ytdlpPath & " --extract-audio --audio-format mp3" & ¬
-		" --postprocessor-args \"ffmpeg:-b:a 320k\"" & ¬
+		" --embed-thumbnail" & ¬
+		" --parse-metadata \"title:(?P<artist>.+?) [–\\-] (?P<track>.+)\"" & ¬
+		" --parse-metadata \"upload_date:(?P<date>\\d{4})\"" & ¬
+		" --postprocessor-args \"ffmpeg:-b:a 320k -metadata description= -metadata synopsis= -metadata purl= -metadata comment=\"" & ¬
 		" --yes-playlist --no-overwrites --add-metadata" & ¬
 		" --cookies-from-browser safari" & ¬
 		" -o " & quoted form of outputTemplate & ¬
