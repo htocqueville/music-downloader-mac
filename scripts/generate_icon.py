@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Generate Sounddrop.icns — a teardrop with concentric sound-wave arcs.
+Generate soundloader.icns — a teardrop with concentric sound-wave arcs.
 
 Design:
   • Deep purple/indigo gradient background, rounded corners (macOS-style)
@@ -8,7 +8,7 @@ Design:
   • Three concentric U-shaped arcs below the drop (sound waves)
 
 Run:   python3 scripts/generate_icon.py
-Output: assets/Sounddrop.icns
+Output: assets/soundloader.icns
 """
 
 import math
@@ -160,10 +160,10 @@ def build_master():
 # Build iconset and .icns
 # ---------------------------------------------------------------------------
 
-ICONSET_DIR = '/tmp/Sounddrop.iconset'
+ICONSET_DIR = '/tmp/soundloader.iconset'
 OUTPUT_ICNS = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-    'assets', 'Sounddrop.icns'
+    'assets', 'soundloader.icns'
 )
 
 ICON_SIZES = {

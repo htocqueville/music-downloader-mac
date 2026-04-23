@@ -14,7 +14,7 @@ error()   { echo -e "${RED}✗ $1${RESET}"; exit 1; }
 
 echo -e "${BOLD}"
 echo "╔══════════════════════════════════╗"
-echo "║   Sounddrop — Setup              ║"
+echo "║   Soundloader — Setup            ║"
 echo "╚══════════════════════════════════╝"
 echo -e "${RESET}"
 
@@ -175,12 +175,12 @@ else
 fi
 
 # ── 8. Compile AppleScript ────────────────────────────────────────────────────
-info "Compiling Sounddrop.app..."
+info "Compiling Soundloader.app..."
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-APPLESCRIPT_SOURCE="$SCRIPT_DIR/app/Sounddrop.applescript"
-APP_DEST="/Applications/Sounddrop.app"
-TMP_SCRIPT="/tmp/Sounddrop_build.applescript"
+APPLESCRIPT_SOURCE="$SCRIPT_DIR/app/Soundloader.applescript"
+APP_DEST="/Applications/Soundloader.app"
+TMP_SCRIPT="/tmp/Soundloader_build.applescript"
 
 if [ ! -f "$APPLESCRIPT_SOURCE" ]; then
     error "AppleScript source not found at $APPLESCRIPT_SOURCE"
@@ -224,7 +224,7 @@ osacompile -o "$APP_DEST" "$TMP_SCRIPT"
 rm -f "$TMP_SCRIPT"
 
 # Apply custom icon (replaces the default Script Editor applet icon)
-ICON_SRC="$SCRIPT_DIR/assets/Sounddrop.icns"
+ICON_SRC="$SCRIPT_DIR/assets/soundloader.icns"
 if [ -f "$ICON_SRC" ]; then
     cp "$ICON_SRC" "$APP_DEST/Contents/Resources/applet.icns"
     touch "$APP_DEST"
@@ -242,7 +242,7 @@ echo -e "${GREEN}${BOLD}╔═════════════════�
 echo "║   Setup complete!                                ║"
 echo "╚══════════════════════════════════════════════════╝${RESET}"
 echo ""
-echo "  Open 'Sounddrop' from /Applications or Spotlight."
+echo "  Open 'Soundloader' from /Applications or Spotlight."
 echo ""
 echo "  YouTube  → works immediately, no setup needed."
 echo "  Spotify  → the app will guide you through credentials on first use."

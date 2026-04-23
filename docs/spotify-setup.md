@@ -32,7 +32,7 @@ To download from Spotify, you need a **free** Spotify Developer account and a pe
 
 ## Step 4 — First download (OAuth authorization)
 
-When you paste a Spotify URL into Music Downloader for the first time after entering your credentials:
+When you paste a Spotify URL into Soundloader for the first time after entering your credentials:
 
 1. A browser window will open asking you to **log in to Spotify** and authorize the app
 2. After authorizing, the browser redirects to `localhost:8888` — this is normal
