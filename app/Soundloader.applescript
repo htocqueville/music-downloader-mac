@@ -268,7 +268,7 @@ on handleSpotify(playlistURL)
 		my saveCredentials(homeDir, configPath, text returned of idDialog, text returned of secretDialog)
 	end if
 
-	set outputTemplate to musicDir & "music-downloader/{list-name}/{list-position} - {artists} - {title}.{output-ext}"
+	set outputTemplate to musicDir & "Soundloader/{list-name}/{list-position} - {artists} - {title}.{output-ext}"
 	set cmd to "source ~/.zshrc 2>/dev/null; source ~/.zprofile 2>/dev/null; " & ¬
 		spotdlPath & " --config --user-auth download " & quoted form of playlistURL & ¬
 		" --bitrate 320k --format mp3 --threads 4" & ¬
@@ -290,9 +290,9 @@ on handleSoundCloud(scURL)
 	set isSet to (scURL contains "/sets/")
 
 	if isSet then
-		set outputTemplate to musicDir & "music-downloader/%(playlist_title)s/%(playlist_index)02d - %(uploader)s - %(title)s.%(ext)s"
+		set outputTemplate to musicDir & "Soundloader/%(playlist_title)s/%(playlist_index)02d - %(uploader)s - %(title)s.%(ext)s"
 	else
-		set outputTemplate to musicDir & "music-downloader/SoundCloud/%(uploader)s - %(title)s.%(ext)s"
+		set outputTemplate to musicDir & "Soundloader/SoundCloud/%(uploader)s - %(title)s.%(ext)s"
 	end if
 
 	set cmd to "source ~/.zshrc 2>/dev/null; source ~/.zprofile 2>/dev/null; " & ¬
@@ -322,9 +322,9 @@ on handleYouTube(videoURL)
 	set isPlaylist to (videoURL contains "list=")
 
 	if isPlaylist then
-		set outputTemplate to musicDir & "music-downloader/%(playlist_title)s/%(title)s.%(ext)s"
+		set outputTemplate to musicDir & "Soundloader/%(playlist_title)s/%(title)s.%(ext)s"
 	else
-		set outputTemplate to musicDir & "music-downloader/YouTube/%(uploader)s - %(title)s.%(ext)s"
+		set outputTemplate to musicDir & "Soundloader/YouTube/%(uploader)s - %(title)s.%(ext)s"
 	end if
 
 	-- Metadata cleanup flags:
