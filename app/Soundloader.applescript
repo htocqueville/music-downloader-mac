@@ -269,9 +269,29 @@ on handleSpotify(playlistURL)
 	end if
 
 	set outputTemplate to musicDir & "Soundloader/{list-name}/{list-position} - {artists} - {title}.{output-ext}"
+
+	-- Derive the Python interpreter inside spotdl's pipx venv (mutagen + spotdl
+	-- importable). The pre-sync script reorders/dedupes existing files to match
+	-- the current Spotify playlist before spotdl runs, so a re-shuffled playlist
+	-- doesn't cause re-downloads under new {list-position} numbers.
+	set AppleScript's text item delimiters to "/"
+	set spotdlBinDir to (text items 1 thru -2 of spotdlPath) as text
+	set AppleScript's text item delimiters to ""
+	set spotdlPython to spotdlBinDir & "/python3"
+	set syncScript to repoPath & "/scripts/spotify_sync.py"
+
+	set syncCmd to ""
+	if playlistURL contains "/playlist/" then
+		set syncCmd to quoted form of spotdlPython & " " & quoted form of syncScript & ¬
+			" --url " & quoted form of playlistURL & ¬
+			" --output-base " & quoted form of (musicDir & "Soundloader") & ¬
+			" --spotdl " & quoted form of spotdlPath & "; "
+	end if
+
 	set cmd to "source ~/.zshrc 2>/dev/null; source ~/.zprofile 2>/dev/null; " & ¬
+		syncCmd & ¬
 		spotdlPath & " --config --user-auth download " & quoted form of playlistURL & ¬
-		" --bitrate 320k --format mp3 --threads 4" & ¬
+		" --bitrate 320k --format mp3 --threads 4 --scan-for-songs" & ¬
 		" --output " & quoted form of outputTemplate & ¬
 		"; osascript -e 'display notification \"Spotify download complete\" with title \"Soundloader\" sound name \"Glass\"'" & ¬
 		"; echo ''; echo '✅ Download complete. You can close this window.'"
